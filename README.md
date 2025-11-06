@@ -72,3 +72,46 @@ Building a data warehouse to analyze 7 million flight records from 2024 using MS
 - **etl_pipeline.py** - Main orchestrator
 
 ---
+## Project Status
+| Task | Description | Status |
+|------|-------------|--------|
+| Data Preparation | Split 7M dataset into Q1-Q4 CSVs | Completed |
+| Source Databases | Create 4 quarterly MS SQL Server databases | Completed |
+| Warehouse Design | Design star schema, create warehouse, populate dimensions | In Progress |
+| ETL Pipeline | Build extraction, transformation, loading modules | Pending |
+| Optimization | Execute full ETL, implement indexing, validate data | Pending |
+
+---
+
+## Team Contributions
+
+**Jill**
+- Dataset splitting and preparation (split_dataset.py)
+- ETL pipeline development (extraction and loading modules)
+- GitHub repository setup and data uploads
+
+**Dipesh**
+- Dataset splitting and preparation support
+- ETL pipeline development (transformation module)
+- Data quality validation logic
+
+**Kamraan**
+- Source database creation and schema design
+- Star schema ERD design for warehouse
+- Dimension table population
+
+**Monisha**
+- Source database creation and data loading
+- Warehouse database setup and schema implementation
+- Dimension table population and data validation
+
+---
+
+## Key Deliverables
+- 4 quarterly database scripts (create_q1_db.sql - create_q4_db.sql)
+- Warehouse schema (warehouse_schema.sql, indexes.sql)
+- ETL modules (extract.py, transform.py, load.py, etl_pipeline.py)
+- Data processing utilities (split_dataset.py)
+- Star schema ERD and architecture diagram
+
+---
