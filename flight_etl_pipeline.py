@@ -1,16 +1,8 @@
 """
 ================================================================================
-FLIGHT DATA WAREHOUSE - FINAL BULLETPROOF ETL PIPELINE
+FLIGHT DATA WAREHOUSE - FINAL ETL (Float Fix Applied)
 ================================================================================
-Generated: November 21, 2025 - FINAL VERSION
-Status: PRODUCTION READY - ALL ISSUES FIXED
-
-TESTED FOR:
-- 25 columns (after Step 2 column removal)
-- No city/state columns in source
-- 15 airlines with full names
-- 100% DQ validation
-- >70% clean data requirement
+Fixed: Invalid float values (infinity/NaN) properly handled
 ================================================================================
 """
 
@@ -95,8 +87,13 @@ def get_db_connection(connection_string):
         raise
 
 def clean_dataframe_for_insert(df):
-    """Clean dataframe for SQL Server - handle NULLs properly"""
+    """Clean dataframe for SQL Server - handle NULLs and invalid floats"""
     df_clean = df.copy()
+
+    # Replace infinity and NaN with None
+    df_clean = df_clean.replace([np.inf, -np.inf, np.nan], None)
+
+    # Handle NULLs
     df_clean = df_clean.where(pd.notnull(df_clean), None)
 
     for col in df_clean.columns:
@@ -104,37 +101,57 @@ def clean_dataframe_for_insert(df):
             df_clean[col] = df_clean[col].apply(
                 lambda x: None if (x == '' or (isinstance(x, str) and x.strip() == '')) else x
             )
+        elif df_clean[col].dtype in ['float64', 'float32']:
+            # Extra check for floats - replace any remaining invalid values
+            df_clean[col] = df_clean[col].apply(
+                lambda x: None if pd.isna(x) or np.isinf(x) else x
+            )
 
-    df_clean = df_clean.replace([np.inf, -np.inf], None)
     return df_clean
 
 def bulk_insert(conn, table_name, dataframe, batch_size=BATCH_SIZE):
-    """Bulk insert with progress logging every 50k rows"""
+    """Bulk insert with NUCLEAR float conversion"""
     total_rows = len(dataframe)
     logger.info(f"Starting bulk insert: {total_rows:,} rows into {table_name}")
-
+    
     df_clean = clean_dataframe_for_insert(dataframe)
     cursor = conn.cursor()
-
+    
     columns = ','.join(df_clean.columns)
     placeholders = ','.join(['?' for _ in df_clean.columns])
     insert_query = f"INSERT INTO {table_name} ({columns}) VALUES ({placeholders})"
-
+    
     inserted_count = 0
     for i in range(0, total_rows, batch_size):
         batch = df_clean.iloc[i:i+batch_size]
-        batch_data = [tuple(row) for row in batch.values]
-
+        
+        # NUCLEAR: Convert each row explicitly
+        batch_data = []
+        for _, row in batch.iterrows():
+            row_list = []
+            for val in row:
+                if val is None or pd.isna(val):
+                    row_list.append(None)
+                elif isinstance(val, (np.integer, np.int64, np.int32)):
+                    row_list.append(int(val))
+                elif isinstance(val, (np.floating, np.float64, np.float32)):
+                    if np.isnan(val) or np.isinf(val):
+                        row_list.append(None)
+                    else:
+                        row_list.append(float(val))
+                else:
+                    row_list.append(val)
+            batch_data.append(tuple(row_list))
+        
         retry_count = 0
         max_retries = 3
-
+        
         while retry_count < max_retries:
             try:
                 cursor.executemany(insert_query, batch_data)
                 conn.commit()
                 inserted_count += len(batch_data)
-
-                # Log every 50k rows
+                
                 if inserted_count % 50000 == 0 or inserted_count == total_rows:
                     logger.info(f"Progress: {inserted_count:,}/{total_rows:,} rows ({inserted_count/total_rows*100:.1f}%)")
                 break
@@ -146,7 +163,7 @@ def bulk_insert(conn, table_name, dataframe, batch_size=BATCH_SIZE):
                     logger.error(f"Batch failed after {max_retries} retries at row {i}: {e}")
                     cursor.close()
                     raise
-
+    
     cursor.close()
     logger.info(f"Bulk insert completed: {inserted_count:,} rows into {table_name}")
 
@@ -435,28 +452,45 @@ def load_facts_for_quarter(quarter_name, target_conn):
         logger.error(f"No records with valid foreign keys for {quarter_name}!")
         raise ValueError(f"No valid FK matches in {quarter_name}")
 
+    # Clean infinity/NaN from numeric columns BEFORE creating fact tables
+    logger.info("Cleaning invalid float values...")
+    numeric_cols = ['crs_dep_time', 'dep_time', 'crs_arr_time', 'arr_time',
+                    'crs_elapsed_time', 'actual_elapsed_time', 'air_time',
+                    'taxi_out', 'taxi_in', 'distance']
+
+    for col in numeric_cols:
+        if col in clean_df.columns:
+            clean_df[col] = clean_df[col].replace([np.inf, -np.inf], None)
+            clean_df[col] = clean_df[col].where(pd.notnull(clean_df[col]), None)
+
     # Load Fact_FlightPerformance
     logger.info("Loading Fact_FlightPerformance...")
+
+    # Explicit conversion with safety checks
     fact_perf = pd.DataFrame({
         'date_key': clean_df['date_key'].astype(int),
         'airline_key': clean_df['airline_key'].astype(int),
         'origin_airport_key': clean_df['origin_airport_key'].astype(int),
         'dest_airport_key': clean_df['dest_airport_key'].astype(int),
         'flight_number': clean_df['op_carrier_fl_num'].astype(str),
-        'scheduled_dep_time': clean_df['crs_dep_time'],
-        'actual_dep_time': clean_df['dep_time'],
-        'scheduled_arr_time': clean_df['crs_arr_time'],
-        'actual_arr_time': clean_df['arr_time'],
-        'scheduled_elapsed_time': clean_df['crs_elapsed_time'],
-        'actual_elapsed_time': clean_df['actual_elapsed_time'],
-        'air_time': clean_df['air_time'],
-        'taxi_out': clean_df['taxi_out'],
-        'taxi_in': clean_df['taxi_in'],
-        'distance': clean_df['distance'],
-        'cancelled': clean_df['cancelled'],
-        'cancellation_code': clean_df['cancellation_code'],
-        'diverted': clean_df['diverted']
+        'scheduled_dep_time': pd.to_numeric(clean_df['crs_dep_time'], errors='coerce'),
+        'actual_dep_time': pd.to_numeric(clean_df['dep_time'], errors='coerce'),
+        'scheduled_arr_time': pd.to_numeric(clean_df['crs_arr_time'], errors='coerce'),
+        'actual_arr_time': pd.to_numeric(clean_df['arr_time'], errors='coerce'),
+        'scheduled_elapsed_time': pd.to_numeric(clean_df['crs_elapsed_time'], errors='coerce'),
+        'actual_elapsed_time': pd.to_numeric(clean_df['actual_elapsed_time'], errors='coerce'),
+        'air_time': pd.to_numeric(clean_df['air_time'], errors='coerce'),
+        'taxi_out': pd.to_numeric(clean_df['taxi_out'], errors='coerce'),
+        'taxi_in': pd.to_numeric(clean_df['taxi_in'], errors='coerce'),
+        'distance': pd.to_numeric(clean_df['distance'], errors='coerce'),
+        'cancelled': pd.to_numeric(clean_df['cancelled'], errors='coerce').astype('Int64'),
+        'cancellation_code': clean_df['cancellation_code'].apply(lambda x: None if pd.isna(x) else str(x)[:10]),
+        'diverted': pd.to_numeric(clean_df['diverted'], errors='coerce').astype('Int64')
     })
+
+    # Replace any remaining invalid values
+    fact_perf = fact_perf.replace([np.inf, -np.inf], None)
+
     bulk_insert(target_conn, 'Fact_FlightPerformance', fact_perf)
 
     # Load Fact_Delays with custom categories
@@ -465,12 +499,12 @@ def load_facts_for_quarter(quarter_name, target_conn):
     def safe_sum_delays(row):
         delays = [row['carrier_delay'], row['weather_delay'], row['nas_delay'], 
                  row['security_delay'], row['late_aircraft_delay']]
-        valid = [d for d in delays if pd.notna(d) and d is not None]
+        valid = [d for d in delays if pd.notna(d) and d is not None and not np.isinf(d)]
         return sum(valid) if valid else None
 
     def categorize_delay(delay):
         """Custom categories: On-Time (≤0), Minor (1-60), Moderate (61-180), Severe (>180)"""
-        if pd.isna(delay) or delay is None or delay <= 0:
+        if pd.isna(delay) or delay is None or np.isinf(delay) or delay <= 0:
             return 'On-Time'
         elif delay <= 60:
             return 'Minor'
@@ -495,8 +529,11 @@ def load_facts_for_quarter(quarter_name, target_conn):
     })
 
     fact_delays['total_delay_minutes'] = clean_df.apply(safe_sum_delays, axis=1)
-    fact_delays['is_delayed'] = fact_delays['arrival_delay'].apply(lambda x: 1 if pd.notna(x) and x > 15 else 0)
+    fact_delays['is_delayed'] = fact_delays['arrival_delay'].apply(lambda x: 1 if pd.notna(x) and not np.isinf(x) and x > 15 else 0)
     fact_delays['delay_category'] = fact_delays['arrival_delay'].apply(categorize_delay)
+
+    # Extra safety check
+    fact_delays = fact_delays.replace([np.inf, -np.inf], None)
 
     bulk_insert(target_conn, 'Fact_Delays', fact_delays)
 
@@ -523,7 +560,7 @@ def load_facts_for_quarter(quarter_name, target_conn):
 def main():
     start_time = datetime.now()
     logger.info("="*80)
-    logger.info("FINAL BULLETPROOF ETL PIPELINE STARTED")
+    logger.info("FINAL ETL PIPELINE STARTED (Float Fix Applied)")
     logger.info(f"Start Time: {start_time}")
     logger.info("Configuration: 25 cols, 15 airlines, 100% DQ, >70% clean required")
     logger.info("="*80)
