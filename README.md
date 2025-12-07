@@ -1,6 +1,5 @@
 # Flight Data Warehouse & Analytics System
-**Advanced Database Course Project - Fall 2025**  
-**Team:** Jill, Dipesh, Kamraan, Monisha
+**Advanced Database Course Project - Fall 2025**
 
 ---
 
@@ -34,37 +33,45 @@ A comprehensive data warehouse system to analyze 7 million flight records from 2
 ## Repository Structure
 ```
 Project/
-├── backend/                 # FastAPI backend application
-│   ├── main.py             # Main API server with endpoints
+├── .gitignore              # Git ignore rules (node_modules, *.csv, *.log)
+├── README.md               # Project documentation
+│
+├── backend/                # FastAPI/Flask backend application
+│   ├── main.py             # Main API server with database connection
 │   └── requirements.txt    # Python dependencies
+│
+├── datasets/               # Data preprocessing utilities
+│   ├── split.py            # Script to split dataset into 4 quarters
+│   └── test.py             # Validation script to verify quarter splits
+│
 ├── frontend/               # React frontend application
-│   ├── src/
-│   │   ├── App.js          # Main application component
-│   │   ├── components/     # React components
-│   │   │   ├── PredefinedQueries.js
-│   │   │   ├── QueryEditor.js
-│   │   │   ├── ResultsTable.js
-│   │   │   └── StatsCards.js
-│   │   ├── services/       # API service layer
-│   │   │   └── api.js
-│   │   └── utils/          # Utility functions
-│   │       ├── csvExport.js
-│   │       └── queryValidator.js
-│   └── package.json
-├── scripts/                # Database and ETL scripts
-│   ├── Star_Schema.sql     # Data warehouse schema
-│   ├── Table_Creation.sql  # Source database tables
-│   ├── Primary_Key_Indexes.sql
-│   ├── Data_Quality.sql    # Data quality framework
-│   ├── flight_etl_pipeline.py  # ETL pipeline
-│   └── IMPORT_CSV_FILES.py
-├── datasets/               # Source data files
-│   ├── 2024_Q1.csv
-│   ├── 2024_Q2.csv
-│   ├── 2024_Q3.csv
-│   ├── 2024_Q4.csv
-│   └── flight_data_2024.csv
-└── README.md
+│   ├── package.json        # Node.js dependencies
+│   ├── package-lock.json   # Locked dependency versions
+│   ├── public/
+│   │   └── index.html      # HTML entry point
+│   └── src/
+│       ├── App.js          # Main application component
+│       ├── index.js        # React entry point
+│       ├── theme.js        # UI theme configuration
+│       ├── components/     # React UI components
+│       │   ├── PredefinedQueries.js
+│       │   ├── QueryEditor.js
+│       │   ├── ResultsTable.js
+│       │   └── StatsCards.js
+│       ├── services/       # API service layer
+│       │   └── api.js      # Backend API calls
+│       └── utils/          # Utility functions
+│           ├── csvExport.js
+│           └── queryValidator.js
+│
+└── scripts/                # Database and ETL scripts
+    ├── Star_Schema.sql     # Data warehouse star schema (fact & dimension tables)
+    ├── Table_Creation.sql  # Source database table definitions
+    ├── Data_Quality.sql    # Data quality checks and validation rules
+    ├── Query.sql           # Ad-hoc analysis queries
+    ├── flight_etl_pipeline.py  # Main ETL pipeline orchestration
+    └── IMPORT_CSV_FILES.py     # Bulk CSV import utility
+
 ```
 
 ---
@@ -196,20 +203,47 @@ python scripts/flight_etl_pipeline.py
 ---
 
 ## ETL Pipeline
+The ETL pipeline (`scripts/flight_etl_pipeline.py`) is a production-grade data integration system with comprehensive data quality controls:
 
-The ETL pipeline (`scripts/flight_etl_pipeline.py`) performs:
-- **Extract:** Reads data from normalized source database (`flight_analytics`)
-- **Transform:** 
-  - Data cleaning and validation
-  - Handles invalid float values (infinity/NaN)
-  - Maps carrier codes to airline names
-  - Data quality checks with quarantine support
-- **Load:** Batch loads data into warehouse fact and dimension tables
+### Extract Phase
+- Connects to `flight_analytics` normalized database (3NF)
+- Extracts 25 optimized columns from quarterly tables (Q1-Q4)
+- Processes data in configurable batches for memory efficiency
+
+### Transform Phase
+- **100% Data Validation**: Every record validated against mandatory field requirements (fl_date, origin, dest, carrier, dep_time, arr_time)
+- **Data Cleaning**: Handles NULL values, infinity values, and NaN in numeric fields
+- **Duplicate Detection**: Identifies duplicates using composite keys (flight date + carrier + flight number + route)
+- **Carrier Mapping**: Maps 15 major US airline codes to full names
+  - American Airlines (AA), Delta (DL), United (UA), Southwest (WN), JetBlue (B6), Alaska (AS), Spirit (NK), Frontier (F9), and 7 regional carriers
+- **Custom Delay Categorization**:
+  - On-Time (≤0 min)
+  - Minor (1-60 min)
+  - Moderate (61-180 min)
+  - Severe (>180 min)
+- **Quarantine System**: Invalid records isolated with rejection reasons for data quality review
+- **Quality Threshold**: Enforces minimum 70% clean data requirement per quarter
+
+### Load Phase
+- Batch insert operations (25,000 records per batch) with retry logic
+- Populates dimension tables (Date, Airline, Airport)
+- Loads fact tables (Flight Performance, Delays)
+- Foreign key resolution and integrity validation
+- Excludes cancelled flights from performance metrics
+
+### Data Quality Features
+- Real-time progress logging with ETA calculations
+- Comprehensive metrics tracking (DQ_Metrics table)
+- Quarantine audit trail (FlightData_Quarantine table)
+- Automatic rollback on quality threshold violations
+- Detailed error logging to `etl_pipeline.log`
 
 **Configuration:**
 - Batch size: 25,000 records
 - Minimum clean data percentage: 70%
 - Supports 15 major US airlines
+- Processes 25 columns per record
+- Handles 7M+ records with robust error handling
 
 ---
 
@@ -236,59 +270,17 @@ curl "http://localhost:8000/api/metrics/database"
 
 ---
 
-## Project Status
+### Key Contributions
 
-| Task | Description | Status |
-|------|-------------|--------|
-| Data Preparation | Split 7M dataset into Q1-Q4 CSVs | ✅ Completed |
-| Source Databases | Create 4 quarterly MS SQL Server databases | ✅ Completed |
-| Warehouse Design | Design star schema, create warehouse, populate dimensions | ✅ Completed |
-| ETL Pipeline | Build extraction, transformation, loading modules | ✅ Completed |
-| Backend API | FastAPI server with query execution endpoints | ✅ Completed |
-| Frontend Application | React UI with query interface and comparison | ✅ Completed |
-| Performance Comparison | Side-by-side database performance analysis | ✅ Completed |
-| Optimization | Indexing, query optimization, data validation | ✅ Completed |
-
----
-
-## Team Contributions
-
-**Jill**
-- Dataset splitting and preparation
-- ETL pipeline development (extraction and loading modules)
-- GitHub repository setup and data uploads
-- Backend API development
-
-**Dipesh**
-- Dataset splitting and preparation support
-- ETL pipeline development (transformation module)
-- Data quality validation logic
-- Frontend development
-
-**Kamraan**
-- Source database creation and schema design
-- Star schema ERD design for warehouse
-- Dimension table population
-- Database optimization
-
-**Monisha**
-- Source database creation and data loading
-- Warehouse database setup and schema implementation
-- Dimension table population and data validation
-- Testing and documentation
-
----
-
-## Key Deliverables
-
-- ✅ 4 quarterly database scripts and data import utilities
-- ✅ Warehouse schema (Star_Schema.sql, Primary_Key_Indexes.sql)
-- ✅ ETL pipeline (flight_etl_pipeline.py)
-- ✅ Data quality framework (Data_Quality.sql)
-- ✅ FastAPI backend with comprehensive query endpoints
-- ✅ React frontend with interactive query interface
-- ✅ Performance comparison system
-- ✅ Star schema ERD and architecture documentation
+- **Data Preparation & Management**: Processed and split 7M+ record dataset into quarterly CSV files (Q1-Q4), ensuring data integrity and proper formatting for database import
+- **Database Architecture**: Designed and implemented 4 quarterly MS SQL Server source databases with normalized schemas, plus star schema data warehouse with fact and dimension tables
+- **ETL Pipeline Development**: Built comprehensive Python-based ETL system with modular extraction, transformation, and loading components for automated data warehouse population
+- **Star Schema Design**: Created dimensional model with fact tables and slowly changing dimensions, developed ERD documentation, and implemented dimension table population logic
+- **Backend Development**: Developed FastAPI server with RESTful endpoints for query execution, database connections, and performance metrics collection
+- **Frontend Development**: Built React-based user interface with interactive query builder, real-time results display, and side-by-side performance comparison features
+- **Performance Analysis**: Implemented comprehensive performance comparison system to analyze query execution times between source databases and data warehouse
+- **Optimization & Quality Assurance**: Applied indexing strategies, query optimization techniques, data quality validation rules, and comprehensive testing procedures
+- **DevOps & Documentation**: Managed GitHub repository, version control, data uploads, SQL scripts, and technical documentation for all project components
 
 ---
 
@@ -312,4 +304,4 @@ This project is developed for educational purposes as part of the Advanced Datab
 ---
 
 ## Contact
-For questions or issues, please contact the project team members.
+For questions or issues, please contact Jill Patel - patel7hb@uwindsor.ca

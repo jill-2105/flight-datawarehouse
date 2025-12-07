@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+__pycache__/
+
+# Logs
+*.log
+etl_pipeline.log
+
+# CSV Data Files (exclude large datasets)
+datasets/*.csv
+backend/datasets/*.csv
+
+# Keep data dictionaries if needed
+!datasets/*dictionary.csv
+
+# Screenshots
+screenshots/
+
+# System
+.DS_Store

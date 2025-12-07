@@ -1,11 +1,3 @@
-"""
-================================================================================
-FLIGHT DATA WAREHOUSE - FINAL ETL (Float Fix Applied)
-================================================================================
-Fixed: Invalid float values (infinity/NaN) properly handled
-================================================================================
-"""
-
 import pyodbc
 import pandas as pd
 import numpy as np

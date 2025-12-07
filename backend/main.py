@@ -53,79 +53,82 @@ PREDEFINED_QUERIES = {
         "name": "Best Carriers by Route (On-Time Performance)",
         "description": "Which carriers have the best on-time performance by route?",
         "sql": """SELECT TOP 20
-    orig.airport_code AS origin,
-    dest_apt.airport_code AS destination,
-    a.carrier_code,
-    a.carrier_name,
-    COUNT(*) AS total_flights,
-    SUM(CASE WHEN d.arrival_delay <= 0 THEN 1 ELSE 0 END) AS on_time_flights,
-    CAST(ROUND(100.0 * SUM(CASE WHEN d.arrival_delay <= 0 THEN 1 ELSE 0 END) / COUNT(*), 2) AS DECIMAL(5,2)) AS on_time_pct,
-    CAST(ROUND(AVG(d.arrival_delay), 2) AS DECIMAL(10,2)) AS avg_delay_minutes
-FROM dbo.Fact_Delays d
-INNER JOIN dbo.Dim_Airport orig ON d.origin_airport_key = orig.airport_key
-INNER JOIN dbo.Dim_Airport dest_apt ON d.dest_airport_key = dest_apt.airport_key
-INNER JOIN dbo.Dim_Airline a ON d.airline_key = a.airline_key
-WHERE d.arrival_delay IS NOT NULL
-GROUP BY orig.airport_code, dest_apt.airport_code, a.carrier_code, a.carrier_name
-HAVING COUNT(*) >= 500
-ORDER BY on_time_pct DESC, total_flights DESC"""
+        orig.airport_code AS origin,
+        dest_apt.airport_code AS destination,
+        a.carrier_code,
+        a.carrier_name,
+        COUNT(*) AS total_flights,
+        SUM(CASE WHEN d.arrival_delay <= 0 THEN 1 ELSE 0 END) AS on_time_flights,
+        CAST(ROUND(100.0 * SUM(CASE WHEN d.arrival_delay <= 0 THEN 1 ELSE 0 END) / COUNT(*), 2) AS DECIMAL(5,2)) AS on_time_pct,
+        CAST(ROUND(AVG(d.arrival_delay), 2) AS DECIMAL(10,2)) AS avg_delay_minutes
+    FROM dbo.Fact_Delays d
+    INNER JOIN dbo.Dim_Airport orig ON d.origin_airport_key = orig.airport_key
+    INNER JOIN dbo.Dim_Airport dest_apt ON d.dest_airport_key = dest_apt.airport_key
+    INNER JOIN dbo.Dim_Airline a ON d.airline_key = a.airline_key
+    WHERE d.arrival_delay IS NOT NULL
+    GROUP BY orig.airport_code, dest_apt.airport_code, a.carrier_code, a.carrier_name
+    HAVING COUNT(*) >= 500
+    ORDER BY on_time_pct DESC, total_flights DESC"""
     },
+
     "query2": {
         "name": "Delay Cause Breakdown by Carrier",
         "description": "Root cause analysis of delays by carrier.",
         "sql": """SELECT 
-    a.carrier_code,
-    a.carrier_name,
-    COUNT(*) AS total_delayed_flights,
-    CAST(ROUND(AVG(d.arrival_delay), 2) AS DECIMAL(10,2)) AS avg_total_delay,
-    CAST(ROUND(AVG(d.carrier_delay), 2) AS DECIMAL(10,2)) AS avg_carrier_delay,
-    CAST(ROUND(AVG(d.weather_delay), 2) AS DECIMAL(10,2)) AS avg_weather_delay,
-    CAST(ROUND(AVG(d.nas_delay), 2) AS DECIMAL(10,2)) AS avg_nas_delay,
-    CAST(ROUND(AVG(d.security_delay), 2) AS DECIMAL(10,2)) AS avg_security_delay,
-    CAST(ROUND(AVG(d.late_aircraft_delay), 2) AS DECIMAL(10,2)) AS avg_late_aircraft_delay
-FROM dbo.Fact_Delays d
-INNER JOIN dbo.Dim_Airline a ON d.airline_key = a.airline_key
-WHERE d.is_delayed = 1 AND d.arrival_delay > 0
-GROUP BY a.carrier_code, a.carrier_name
-ORDER BY total_delayed_flights DESC"""
+        a.carrier_code,
+        a.carrier_name,
+        COUNT(*) AS total_delayed_flights,
+        CAST(ROUND(AVG(d.arrival_delay), 2) AS DECIMAL(10,2)) AS avg_total_delay,
+        CAST(ROUND(AVG(d.carrier_delay), 2) AS DECIMAL(10,2)) AS avg_carrier_delay,
+        CAST(ROUND(AVG(d.weather_delay), 2) AS DECIMAL(10,2)) AS avg_weather_delay,
+        CAST(ROUND(AVG(d.nas_delay), 2) AS DECIMAL(10,2)) AS avg_nas_delay,
+        CAST(ROUND(AVG(d.security_delay), 2) AS DECIMAL(10,2)) AS avg_security_delay,
+        CAST(ROUND(AVG(d.late_aircraft_delay), 2) AS DECIMAL(10,2)) AS avg_late_aircraft_delay
+    FROM dbo.Fact_Delays d
+    INNER JOIN dbo.Dim_Airline a ON d.airline_key = a.airline_key
+    WHERE d.is_delayed = 1 AND d.arrival_delay > 0
+    GROUP BY a.carrier_code, a.carrier_name
+    ORDER BY total_delayed_flights DESC"""
     },
+
     "query3": {
         "name": "Airports with Most Departure Delays",
         "description": "Which airports need more resources?",
         "sql": """SELECT TOP 25
-    apt.airport_code,
-    COUNT(*) AS total_flights,
-    SUM(CASE WHEN d.departure_delay > 15 THEN 1 ELSE 0 END) AS delayed_departures,
-    CAST(ROUND(100.0 * SUM(CASE WHEN d.departure_delay > 15 THEN 1 ELSE 0 END) / COUNT(*), 2) AS DECIMAL(5,2)) AS delay_rate_pct,
-    CAST(ROUND(AVG(d.departure_delay), 2) AS DECIMAL(10,2)) AS avg_departure_delay,
-    CAST(ROUND(AVG(CASE WHEN d.departure_delay > 0 THEN d.departure_delay END), 2) AS DECIMAL(10,2)) AS avg_delay_when_delayed,
-    CAST(MAX(d.departure_delay) AS INT) AS max_departure_delay
-FROM dbo.Fact_Delays d
-INNER JOIN dbo.Dim_Airport apt ON d.origin_airport_key = apt.airport_key
-WHERE d.departure_delay IS NOT NULL
-GROUP BY apt.airport_code
-HAVING COUNT(*) >= 1000
-ORDER BY delayed_departures DESC"""
+        apt.airport_code,
+        COUNT(*) AS total_flights,
+        SUM(CASE WHEN d.departure_delay > 15 THEN 1 ELSE 0 END) AS delayed_departures,
+        CAST(ROUND(100.0 * SUM(CASE WHEN d.departure_delay > 15 THEN 1 ELSE 0 END) / COUNT(*), 2) AS DECIMAL(5,2)) AS delay_rate_pct,
+        CAST(ROUND(AVG(d.departure_delay), 2) AS DECIMAL(10,2)) AS avg_departure_delay,
+        CAST(ROUND(AVG(CASE WHEN d.departure_delay > 0 THEN d.departure_delay END), 2) AS DECIMAL(10,2)) AS avg_delay_when_delayed,
+        CAST(MAX(d.departure_delay) AS INT) AS max_departure_delay
+    FROM dbo.Fact_Delays d
+    INNER JOIN dbo.Dim_Airport apt ON d.origin_airport_key = apt.airport_key
+    WHERE d.departure_delay IS NOT NULL
+    GROUP BY apt.airport_code
+    HAVING COUNT(*) >= 1000
+    ORDER BY delayed_departures DESC"""
     },
+
     "query4": {
         "name": "Complete Carrier Performance Scorecard",
         "description": "Comprehensive metrics (30+ sec on normalized DB).",
         "sql": """SELECT 
-    a.carrier_code,
-    a.carrier_name,
-    COUNT(*) AS total_flights,
-    SUM(CASE WHEN d.is_delayed = 1 THEN 1 ELSE 0 END) AS delayed_flights,
-    CAST(ROUND(100.0 * SUM(CASE WHEN d.is_delayed = 1 THEN 1 ELSE 0 END) / COUNT(*), 2) AS DECIMAL(5,2)) AS delay_rate_pct,
-    CAST(ROUND(AVG(d.arrival_delay), 2) AS DECIMAL(10,2)) AS avg_arrival_delay,
-    CAST(ROUND(AVG(d.departure_delay), 2) AS DECIMAL(10,2)) AS avg_departure_delay,
-    CAST(ROUND(AVG(d.carrier_delay), 2) AS DECIMAL(10,2)) AS avg_carrier_delay,
-    CAST(ROUND(AVG(d.weather_delay), 2) AS DECIMAL(10,2)) AS avg_weather_delay,
-    CAST(ROUND(AVG(d.nas_delay), 2) AS DECIMAL(10,2)) AS avg_nas_delay
-FROM dbo.Fact_Delays d
-INNER JOIN dbo.Dim_Airline a ON d.airline_key = a.airline_key
-WHERE d.arrival_delay IS NOT NULL
-GROUP BY a.carrier_code, a.carrier_name
-ORDER BY total_flights DESC"""
+        a.carrier_code,
+        a.carrier_name,
+        COUNT(*) AS total_flights,
+        SUM(CASE WHEN d.is_delayed = 1 THEN 1 ELSE 0 END) AS delayed_flights,
+        CAST(ROUND(100.0 * SUM(CASE WHEN d.is_delayed = 1 THEN 1 ELSE 0 END) / COUNT(*), 2) AS DECIMAL(5,2)) AS delay_rate_pct,
+        CAST(ROUND(AVG(d.arrival_delay), 2) AS DECIMAL(10,2)) AS avg_arrival_delay,
+        CAST(ROUND(AVG(d.departure_delay), 2) AS DECIMAL(10,2)) AS avg_departure_delay,
+        CAST(ROUND(AVG(d.carrier_delay), 2) AS DECIMAL(10,2)) AS avg_carrier_delay,
+        CAST(ROUND(AVG(d.weather_delay), 2) AS DECIMAL(10,2)) AS avg_weather_delay,
+        CAST(ROUND(AVG(d.nas_delay), 2) AS DECIMAL(10,2)) AS avg_nas_delay
+    FROM dbo.Fact_Delays d
+    INNER JOIN dbo.Dim_Airline a ON d.airline_key = a.airline_key
+    WHERE d.arrival_delay IS NOT NULL
+    GROUP BY a.carrier_code, a.carrier_name
+    ORDER BY total_flights DESC"""
     }
 }
 

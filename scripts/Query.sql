@@ -1,5 +1,4 @@
 -- ============================================================================
--- BUSINESS DECISION QUERIES: 3-Query Performance Benchmark
 -- Normalized DB vs Star Schema Data Warehouse
 -- ============================================================================
 
@@ -23,15 +22,8 @@ CREATE TABLE #BenchmarkResults (
 );
 
 PRINT '============================================================================';
-PRINT 'BUSINESS DECISION QUERIES - PERFORMANCE BENCHMARK';
-PRINT '============================================================================';
-PRINT '';
-PRINT 'Dataset: 7M flight records (2024 full year)';
-PRINT 'Queries: 3 real-world business decision scenarios';
 PRINT 'Comparison: Normalized (Q1-Q4 tables) vs Star Schema (Dimensional Model)';
-PRINT '';
 PRINT '============================================================================';
-PRINT '';
 
 -- ============================================================================
 -- QUERY 1: Which carriers have the best on-time performance by route?
@@ -345,17 +337,11 @@ PRINT '';
 PRINT '--- Query 3 Complete ---';
 PRINT '';
 
--- ============================================================================
--- FINAL RESULTS SUMMARY
--- ============================================================================
-
 USE flight_analytics;
 
-PRINT '';
 PRINT '============================================================================';
 PRINT '                    PERFORMANCE BENCHMARK RESULTS                           ';
 PRINT '============================================================================';
-PRINT '';
 
 -- Side-by-Side Comparison
 PRINT '--- Performance Comparison Table ---';
