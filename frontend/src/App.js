@@ -13,8 +13,9 @@ import {
   Alert,
   Tabs,
   Tab,
+  Paper,
+  Button,
   Grid,
-  Divider,
   Chip,
   CircularProgress,
 } from '@mui/material';
@@ -23,11 +24,47 @@ import Brightness7Icon from '@mui/icons-material/Brightness7';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import TableRowsIcon from '@mui/icons-material/TableRows';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import QueryEditor from './components/QueryEditor';
 import PredefinedQueries from './components/PredefinedQueries';
 import ResultsTable from './components/ResultsTable';
 import { apiService } from './services/api';
 import { getTheme } from './theme';
+import tableauScreenshot from './Tableau_Dashboard.png';
+
+// Tableau embed component
+function TableauEmbed() {
+  const tableauUrl = 'https://public.tableau.com/app/profile/jill.patel4309/viz/Flight_Performance_Dashboard_2024/FlightPerformanceAnalytics';
+
+  const openInNewWindow = () => {
+    window.open(tableauUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <Box sx={{ width: '100%' }}>
+      <Paper elevation={3} sx={{ p: 2, mb: 2 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+          <Typography variant="h6">Tableau Dashboard</Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<OpenInNewIcon />}
+            onClick={openInNewWindow}
+          >
+            Open in new window
+          </Button>
+        </Box>
+        <Box sx={{ width: '100%', overflow: 'hidden', display: 'flex', justifyContent: 'center' }}>
+          <img
+            src={tableauScreenshot}
+            alt="Tableau Dashboard"
+            style={{ width: '100%', height: 800, objectFit: 'cover', borderRadius: 4 }}
+          />
+        </Box>
+      </Paper>
+    </Box>
+  );
+}
 
 function App() {
   const [darkMode, setDarkMode] = useState(false);
@@ -35,9 +72,9 @@ function App() {
   const [stats, setStats] = useState(null);
   const [statsLoading, setStatsLoading] = useState(true);
   const [predefinedQueries, setPredefinedQueries] = useState([]);
-  const [results, setResults] = useState(null);
-  const [queryMetrics, setQueryMetrics] = useState(null);
-  const [tabValue, setTabValue] = useState(0); // 0 = Predefined, 1 = Custom
+  const [tabValue, setTabValue] = useState(0); // 0 = Predefined, 1 = Custom, 2 = Tableau
+  // state variable to explicitly track whether the Tableau tab is active (tabValue === 2)
+  const [isTableauActive, setIsTableauActive] = useState(false);
   const [comparisonResults, setComparisonResults] = useState(null);
   const [warehouseLoading, setWarehouseLoading] = useState(false);
   const [normalizedLoading, setNormalizedLoading] = useState(false);
@@ -55,6 +92,11 @@ function App() {
     fetchDatabaseStats();
     fetchPredefinedQueries();
   }, []);
+
+  // keep `isTableauActive` in sync with the selected tab
+  useEffect(() => {
+    setIsTableauActive(tabValue === 2);
+  }, [tabValue]);
 
   const fetchDatabaseStats = async () => {
     setStatsLoading(true);
@@ -296,6 +338,7 @@ function App() {
             >
               <Tab label="Predefined Queries" />
               <Tab label="Custom SQL Query" />
+              <Tab label="Tableau Dashboard" />
             </Tabs>
 
             {/* Tab 1: Predefined Queries */}
@@ -313,6 +356,11 @@ function App() {
                 onExecute={handleComparisonQuery}
                 loading={warehouseLoading || normalizedLoading}
               />
+            )}
+
+            {/* Tab 3: Tableau Dashboard */}
+            {tabValue === 2 && (
+              <TableauEmbed />
             )}
           </Box>
 
