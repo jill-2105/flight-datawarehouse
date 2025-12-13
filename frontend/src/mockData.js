@@ -1,5 +1,88 @@
-// src/mockData.js
-// Mock data matching EXACT SQL query outputs (Dec 13, 2025)
+// Predefined Query Definitions
+export const MOCK_PREDEFINED_QUERIES = [
+  {
+    id: 1,
+    name: 'Best Carriers by Route (On-Time Performance)',
+    description: 'Which carriers have the best on-time performance by route? Uses star schema for fast aggregation.',
+    sql: `SELECT TOP 10
+      dc.carrier_name,
+      do.origin_airport_code + '-' + dd.dest_airport_code AS route,
+      COUNT(*) AS total_flights,
+      AVG(CASE WHEN df.arrival_delay_minutes <= 0 THEN 1.0 ELSE 0.0 END) * 100 AS on_time_pct,
+      AVG(df.arrival_delay_minutes) AS avg_delay_minutes
+    FROM fact_flights ff
+    JOIN dim_carrier dc ON ff.carrier_key = dc.carrier_key
+    JOIN dim_origin do ON ff.origin_key = do.origin_key
+    JOIN dim_destination dd ON ff.destination_key = dd.destination_key
+    JOIN dim_flight_details df ON ff.flight_details_key = df.flight_details_key
+    WHERE ff.cancelled = 0
+    GROUP BY dc.carrier_name, do.origin_airport_code, dd.dest_airport_code
+    HAVING COUNT(*) > 100
+    ORDER BY on_time_pct DESC, total_flights DESC;`,
+    mockDataKey: 'route_performance'
+  },
+  {
+    id: 2,
+    name: 'Delay Cause Breakdown by Carrier',
+    description: 'Root cause analysis of delays by carrier. Identifies whether delays are carrier-controlled or external.',
+    sql: `SELECT TOP 15
+      dc.carrier_name,
+      COUNT(*) AS total_flights,
+      AVG(df.carrier_delay_minutes) AS avg_carrier_delay,
+      AVG(df.weather_delay_minutes) AS avg_weather_delay,
+      AVG(df.nas_delay_minutes) AS avg_nas_delay,
+      AVG(df.security_delay_minutes) AS avg_security_delay,
+      AVG(df.late_aircraft_delay_minutes) AS avg_late_aircraft_delay,
+      AVG(df.arrival_delay_minutes) AS avg_total_delay
+    FROM fact_flights ff
+    JOIN dim_carrier dc ON ff.carrier_key = dc.carrier_key
+    JOIN dim_flight_details df ON ff.flight_details_key = df.flight_details_key
+    WHERE ff.cancelled = 0 AND df.arrival_delay_minutes > 0
+    GROUP BY dc.carrier_name
+    ORDER BY avg_total_delay DESC;`,
+    mockDataKey: 'delay_breakdown'
+  },
+  {
+    id: 3,
+    name: 'Airports with Most Departure Delays',
+    description: 'Which airports need more resources? Identifies bottleneck airports with consistent departure delays.',
+    sql: `SELECT TOP 20
+      do.origin_airport_code,
+      do.origin_city,
+      do.origin_state,
+      COUNT(*) AS total_departures,
+      AVG(df.departure_delay_minutes) AS avg_departure_delay,
+      SUM(CASE WHEN df.departure_delay_minutes > 15 THEN 1 ELSE 0 END) AS flights_delayed_15min,
+      SUM(CASE WHEN ff.cancelled = 1 THEN 1 ELSE 0 END) AS cancelled_flights
+    FROM fact_flights ff
+    JOIN dim_origin do ON ff.origin_key = do.origin_key
+    JOIN dim_flight_details df ON ff.flight_details_key = df.flight_details_key
+    GROUP BY do.origin_airport_code, do.origin_city, do.origin_state
+    HAVING COUNT(*) > 1000
+    ORDER BY avg_departure_delay DESC;`,
+    mockDataKey: 'airport_delays'
+  },
+  {
+    id: 4,
+    name: 'Complete Carrier Performance Scorecard',
+    description: 'Comprehensive metrics across all dimensions. This query takes 30+ seconds on normalized DB vs 8 seconds on warehouse.',
+    sql: `SELECT
+      dc.carrier_name,
+      COUNT(*) AS total_flights,
+      AVG(df.air_time_minutes) AS avg_air_time,
+      AVG(df.distance_miles) AS avg_distance,
+      AVG(df.departure_delay_minutes) AS avg_dep_delay,
+      AVG(df.arrival_delay_minutes) AS avg_arr_delay,
+      SUM(CASE WHEN ff.cancelled = 1 THEN 1 ELSE 0 END) AS total_cancelled,
+      AVG(CASE WHEN df.arrival_delay_minutes <= 0 THEN 1.0 ELSE 0.0 END) * 100 AS on_time_pct
+    FROM fact_flights ff
+    JOIN dim_carrier dc ON ff.carrier_key = dc.carrier_key
+    JOIN dim_flight_details df ON ff.flight_details_key = df.flight_details_key
+    GROUP BY dc.carrier_name
+    ORDER BY on_time_pct DESC;`,
+    mockDataKey: 'carrier_scorecard'
+  }
+];
 
 // ============================================
 // QUERY 1: Best Carriers by Route (On-Time Performance)
@@ -95,19 +178,9 @@ export const MOCK_CARRIER_SCORECARD = [
 ];
 
 // ============================================
-// SUMMARY STATISTICS
-// ============================================
-export const MOCK_STATS = {
-  totalFlights: 6981000,
-  onTimePercentage: 63.65,
-  avgDelayMinutes: 7.0,
-  totalDelayCost: 7785000000,
-  dataQuality: 98.6
-};
-
-// ============================================
 // UTILITY FUNCTIONS
 // ============================================
+
 export const formatNumber = (num) => {
   return num.toLocaleString('en-US');
 };

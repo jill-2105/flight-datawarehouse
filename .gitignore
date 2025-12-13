@@ -13,8 +13,10 @@ backend/datasets/*.csv
 # Keep data dictionaries if needed
 !datasets/*dictionary.csv
 
-# Screenshots
-screenshots/
-
 # System
 .DS_Store
+.env.production
+
+# Build files
+frontend/build/
+frontend/node_modules/

@@ -101,8 +101,9 @@ function App() {
   const fetchDatabaseStats = async () => {
     setStatsLoading(true);
     try {
-      const data = await apiService.getDatabaseMetrics();
-      setStats(data.metrics || data);
+      const response = await apiService.getDatabaseMetrics();
+      const payload = response && response.data ? response.data : response;
+      setStats(payload?.metrics ?? payload ?? null);
     } catch (error) {
       console.error('Error fetching database stats:', error);
       showSnackbar('Failed to fetch database statistics', 'error');
@@ -261,6 +262,7 @@ function App() {
           {/* Stats Cards - 3 Cards Only, Horizontal Layout */}
           <Box sx={{ mb: 4 }}>
             <Grid container spacing={3}>
+
               {/* Total Flights */}
               <Grid item xs={12} md={4}>
                 <Box
@@ -323,6 +325,72 @@ function App() {
                       {statsLoading ? '...' : stats?.avg_delay_minutes?.toFixed(2) || '0.00'}
                     </Typography>
                     <Typography variant="body1">Avg Delay (min)</Typography>
+                  </Box>
+                </Box>
+              </Grid>
+
+              {/* On-time Percentage */}
+              <Grid item xs={12} md={4}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    p: 3,
+                    bgcolor: 'success.main',
+                    borderRadius: 2,
+                    color: 'white',
+                  }}
+                >
+                  <Box sx={{ mr: 3, fontSize: 48 }}>✅</Box>
+                  <Box>
+                    <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
+                      {statsLoading ? '...' : (stats?.on_time_percentage != null ? `${stats.on_time_percentage}` : '0')}%
+                    </Typography>
+                    <Typography variant="body1">On-time Percentage</Typography>
+                  </Box>
+                </Box>
+              </Grid>
+
+              {/* Total Delay Cost */}
+              <Grid item xs={12} md={4}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    p: 3,
+                    bgcolor: 'warning.main',
+                    borderRadius: 2,
+                    color: 'white',
+                  }}
+                >
+                  <Box sx={{ mr: 3, fontSize: 48 }}>💰</Box>
+                  <Box>
+                    <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
+                      {statsLoading ? '...' : `$${(stats?.total_delay_cost || 0).toLocaleString()}`}
+                    </Typography>
+                    <Typography variant="body1">Total Delay Cost</Typography>
+                  </Box>
+                </Box>
+              </Grid>
+
+              {/* Data Quality */}
+              <Grid item xs={12} md={4}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    p: 3,
+                    bgcolor: 'error.main',
+                    borderRadius: 2,
+                    color: 'white',
+                  }}
+                >
+                  <Box sx={{ mr: 3, fontSize: 48 }}>📊</Box>
+                  <Box>
+                    <Typography variant="h3" sx={{ fontWeight: 'bold' }}>
+                      {statsLoading ? '...' : (stats?.data_quality != null ? `${stats.data_quality}` : '0')}%
+                    </Typography>
+                    <Typography variant="body1">Data Quality</Typography>
                   </Box>
                 </Box>
               </Grid>
