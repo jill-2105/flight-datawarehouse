@@ -100,7 +100,7 @@ PREDEFINED_QUERIES = {
         SUM(CASE WHEN d.departure_delay > 15 THEN 1 ELSE 0 END) AS delayed_departures,
         CAST(ROUND(100.0 * SUM(CASE WHEN d.departure_delay > 15 THEN 1 ELSE 0 END) / COUNT(*), 2) AS DECIMAL(5,2)) AS delay_rate_pct,
         CAST(ROUND(AVG(d.departure_delay), 2) AS DECIMAL(10,2)) AS avg_departure_delay,
-        CAST(ROUND(AVG(CASE WHEN d.departure_delay > 0 THEN d.departure_delay END), 2) AS DECIMAL(10,2)) AS avg_delay_when_delayed,
+        CAST(ROUND(AVG(CASE WHEN d.departure_delay > 15 THEN d.departure_delay END), 2) AS DECIMAL(10,2)) AS avg_delay_when_delayed,
         CAST(MAX(d.departure_delay) AS INT) AS max_departure_delay
     FROM dbo.Fact_Delays d
     INNER JOIN dbo.Dim_Airport apt ON d.origin_airport_key = apt.airport_key

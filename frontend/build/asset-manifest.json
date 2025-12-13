@@ -1,0 +1,11 @@
+{
+  "files": {
+    "main.js": "/static/js/main.76f19614.js",
+    "static/media/Tableau_Dashboard.png": "/static/media/Tableau_Dashboard.c82cbedc66d2279fa1b9.png",
+    "index.html": "/index.html",
+    "main.76f19614.js.map": "/static/js/main.76f19614.js.map"
+  },
+  "entrypoints": [
+    "static/js/main.76f19614.js"
+  ]
+}
