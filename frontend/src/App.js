@@ -147,11 +147,12 @@ function App() {
     // Get the query SQL from predefined queries
     const query = predefinedQueries.find(q => q.id === queryId);
     if (query) {
-      handleComparisonQuery(query.sql);
+      // Pass both query ID (for mock mode) and SQL (for real API calls)
+      handleComparisonQuery(query.sql, queryId);
     }
   };
 
-  const handleComparisonQuery = async (query) => {
+  const handleComparisonQuery = async (query, queryId = null) => {
     setWarehouseLoading(true);
     setNormalizedLoading(true);
     setError(null);
@@ -161,8 +162,11 @@ function App() {
     let warehouseData = null;
     let normalizedData = null;
 
+    // Pass both queryId (for mock mode) and SQL (for real API calls)
+    const queryParam = queryId !== null ? { query, queryId } : query;
+
     // Make parallel API calls to both databases
-    const warehousePromise = apiService.executeWarehouseQuery(query)
+    const warehousePromise = apiService.executeWarehouseQuery(queryParam)
       .then((result) => {
         warehouseData = result;
         setWarehouseLoading(false);
@@ -173,7 +177,7 @@ function App() {
         throw new Error(`Warehouse query failed: ${err.message || err}`);
       });
 
-    const normalizedPromise = apiService.executeNormalizedQuery(query)
+    const normalizedPromise = apiService.executeNormalizedQuery(queryParam)
       .then((result) => {
         normalizedData = result;
         setNormalizedLoading(false);

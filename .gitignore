@@ -20,3 +20,6 @@ backend/datasets/*.csv
 # Build files
 frontend/build/
 frontend/node_modules/
+
+images/desktop.ini
+images/Flight_Performance_Dashboard_2024.twbx
